@@ -118,6 +118,21 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
 
     application.run_polling()
+from flask import Flask
+import threading
+
+# Flask server
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot ishlayapti!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+# Flask serverini alohida threadda ishga tushirish
+threading.Thread(target=run).start()
 
 if __name__ == '__main__':
     main()
