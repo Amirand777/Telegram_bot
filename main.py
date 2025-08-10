@@ -1,8 +1,8 @@
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler,
-    ContextTypes, filters
-)
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from flask import Flask
+import threading
+import os
 
 # Admin ID
 ADMIN_ID = 7594376654  # bu yerga o'zingning ID'ingni qo'y
@@ -112,14 +112,12 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Botni ishga tushirish
 def main():
-    application = ApplicationBuilder().token("8452858160:AAHr1NxhlpAZXPFA2UpjCXFcwHiP27vZAB4").build()
+    application = ApplicationBuilder().token(os.getenv("8452858160:AAHr1NxhlpAZXPFA2UpjCXFcwHiP27vZAB4")).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
 
     application.run_polling()
-from flask import Flask
-import threading
 
 # Flask server
 app = Flask('')
