@@ -111,14 +111,13 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(response_message)
 
 # Botni ishga tushirish
-async def main():
-    application = ApplicationBuilder().token("8452858160:AAHr1NxhlpAZXPFA2UpjCXFcwHiP27vZAB4").build()
+def main():
+    application = ApplicationBuilder().token("TOKENINGNI_BU_YERGA_QO'Y").build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
 
-    await application.run_polling()
+    application.run_polling()
 
 if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
+    main()
