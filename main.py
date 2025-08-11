@@ -1,4 +1,5 @@
 import os
+import asyncio
 from flask import Flask, request
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
@@ -121,12 +122,13 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
 
-# Flask webhook endpointi
+# Flask webhook endpointi (ASYNC coroutine put qilish)
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     json_update = request.get_json(force=True)
     update = Update.de_json(json_update, bot)
-    application.update_queue.put(update)
+    # Asinxron qatorni asyncio yordamida chaqiramiz
+    asyncio.run(application.update_queue.put(update))
     return "OK"
 
 @app.route("/")
@@ -134,4 +136,5 @@ def index():
     return "Bot ishlayapti", 200
 
 if __name__ == "__main__":
+    # Flask serveri 0.0.0.0 da 8080 portda ishlaydi
     app.run(host="0.0.0.0", port=8080)
