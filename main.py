@@ -1,11 +1,10 @@
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-from flask import Flask
-import threading
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
+from telegram.ext import Dispatcher, CommandHandler, MessageHandler, ContextTypes, filters
+from flask import Flask, request
 import os
 
 # Admin ID
-ADMIN_ID = 7594376654  # bu yerga o'zingning ID'ingni qo'y
+ADMIN_ID = 7594376654  # o'zingning ID'ingni qo'y
 
 reply_keyboard = [['Ha', "Yo'q"]]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
@@ -34,6 +33,10 @@ admin_contact_message = [
     "🇺🇿 Iltimos, to'lovni amalga oshiring: Tez orada Admin siz bilan bog'lanadi.",
     "🇷🇺 Пожалуйста, произведите оплату: Вскоре Администратор свяжется с вами."
 ]
+
+TOKEN = os.getenv("TOKEN")  # Render-dan TOKEN muhit o'zgaruvchidan oling
+bot = Bot(token=TOKEN)
+dispatcher = Dispatcher(bot, None, use_context=True)
 
 # /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -110,27 +113,25 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(response_message)
 
-# Botni ishga tushirish
-def main():
-    application = ApplicationBuilder().token(os.getenv("8452858160:AAHr1NxhlpAZXPFA2UpjCXFcwHiP27vZAB4")).build()
+# Handlerlarni dispatcherga qo'shamiz
+dispatcher.add_handler(CommandHandler("start", start))
+dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
+# Flask app
+from flask import Flask, request
 
-    application.run_polling()
+app = Flask(__name__)
 
-# Flask server
-app = Flask('')
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    json_update = request.get_json(force=True)
+    update = Update.de_json(json_update, bot)
+    dispatcher.process_update(update)
+    return "OK"
 
-@app.route('/')
-def home():
-    return "Bot ishlayapti!"
+@app.route("/")
+def index():
+    return "Bot ishlayapti", 200
 
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-# Flask serverini alohida threadda ishga tushirish
-threading.Thread(target=run).start()
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)
