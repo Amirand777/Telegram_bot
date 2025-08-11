@@ -1,11 +1,9 @@
 import os
-import asyncio
 from flask import Flask, request
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-# Admin ID
-ADMIN_ID = 7594376654  # o'zingizning ID'ingiz
+ADMIN_ID = 7594376654  # o'zingizning IDingiz
 
 reply_keyboard = [['Ha', "Yo'q"]]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
@@ -35,28 +33,24 @@ admin_contact_message = [
     "🇷🇺 Пожалуйста, произведите оплату: Вскоре Администратор свяжется с вами."
 ]
 
-TOKEN = os.getenv("TOKEN")  # Renderdagi muhit o'zgaruvchisidan olinadi
+TOKEN = os.getenv("TOKEN")  # Renderdagi muhit o'zgaruvchisidan olamiz
 bot = Bot(token=TOKEN)
 
 app = Flask(__name__)
 
-# Botning Application yaratilishi
 application = ApplicationBuilder().token(TOKEN).build()
 
-# /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     context.user_data['lang_step'] = 0
     await update.message.reply_text("\n".join(questions), reply_markup=markup)
 
-# Matnlarni qayta ishlash
 async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_name = update.effective_user.first_name or "Noma'lum"
     username = update.effective_user.username or "username yo'q"
     text = update.message.text
 
-    # Agar admin javob bersa
     if user_id == ADMIN_ID:
         if update.message.reply_to_message:
             original_message = update.message.reply_to_message.text
@@ -76,7 +70,6 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         return
         return
 
-    # Admin uchun xabar
     admin_message = (
         f"🔔 Yangi xabar!\n\n"
         f"👤 Foydalanuvchi: {user_name}\n"
@@ -90,7 +83,6 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"Error sending message to admin: {e}")
 
-    # Bosqichlarni tekshirish
     text_lower = text.lower()
     step = context.user_data.get('lang_step', 0)
 
@@ -118,17 +110,14 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(response_message)
 
-# Handlerlarni qo'shish
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
 
-# Flask webhook endpointi (ASYNC coroutine put qilish)
 @app.route(f"/{TOKEN}", methods=["POST"])
-def webhook():
-    json_update = request.get_json(force=True)
+async def webhook():
+    json_update = await request.get_json(force=True)
     update = Update.de_json(json_update, bot)
-    # Asinxron qatorni asyncio yordamida chaqiramiz
-    asyncio.run(application.update_queue.put(update))
+    await application.update_queue.put(update)
     return "OK"
 
 @app.route("/")
@@ -136,5 +125,4 @@ def index():
     return "Bot ishlayapti", 200
 
 if __name__ == "__main__":
-    # Flask serveri 0.0.0.0 da 8080 portda ishlaydi
     app.run(host="0.0.0.0", port=8080)
