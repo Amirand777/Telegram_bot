@@ -1,5 +1,6 @@
 import os
-from flask import Flask, request
+import asyncio
+from flask import Flask, request, abort
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
@@ -35,7 +36,6 @@ admin_contact_message = [
 
 TOKEN = os.getenv("TOKEN")  # Renderdagi muhit o'zgaruvchisidan olamiz
 bot = Bot(token=TOKEN)
-
 app = Flask(__name__)
 
 application = ApplicationBuilder().token(TOKEN).build()
@@ -113,16 +113,27 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
 
+
+# Sync webhook endpoint (Flask async emas)
 @app.route(f"/{TOKEN}", methods=["POST"])
-async def webhook():
-    json_update = await request.get_json(force=True)
+def webhook():
+    json_update = request.get_json(force=True)
     update = Update.de_json(json_update, bot)
-    await application.update_queue.put(update)
+
+    # Async Telegram app ga update ni qo'shish uchun loop kerak
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(application.update_queue.put(update))
+    loop.run_until_complete(application.process_update(update))
+    loop.close()
+
     return "OK"
+
 
 @app.route("/")
 def index():
     return "Bot ishlayapti", 200
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
