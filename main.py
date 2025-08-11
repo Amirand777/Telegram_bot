@@ -1,10 +1,10 @@
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, ContextTypes, filters
-from flask import Flask, request
 import os
+from flask import Flask, request
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 # Admin ID
-ADMIN_ID = 7594376654  # o'zingning ID'ingni qo'y
+ADMIN_ID = 7594376654  # o'zingizning ID'ingiz
 
 reply_keyboard = [['Ha', "Yo'q"]]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
@@ -34,9 +34,13 @@ admin_contact_message = [
     "🇷🇺 Пожалуйста, произведите оплату: Вскоре Администратор свяжется с вами."
 ]
 
-TOKEN = os.getenv("TOKEN")  # Render-dan TOKEN muhit o'zgaruvchidan oling
+TOKEN = os.getenv("TOKEN")  # Renderdagi muhit o'zgaruvchisidan olinadi
 bot = Bot(token=TOKEN)
-dispatcher = Dispatcher(bot, None, use_context=True)
+
+app = Flask(__name__)
+
+# Botning Application yaratilishi
+application = ApplicationBuilder().token(TOKEN).build()
 
 # /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -90,7 +94,7 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     step = context.user_data.get('lang_step', 0)
 
     if step == 0:
-        if text_lower not in ['ha', 'yo\'q', 'yoq']:
+        if text_lower not in ['ha', "yo'q", 'yoq']:
             await update.message.reply_text(
                 "Iltimos, faqat 'Ha' yoki 'Yo‘q' deb javob bering.",
                 reply_markup=markup
@@ -113,20 +117,16 @@ async def handle_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(response_message)
 
-# Handlerlarni dispatcherga qo'shamiz
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
+# Handlerlarni qo'shish
+application.add_handler(CommandHandler("start", start))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_response))
 
-# Flask app
-from flask import Flask, request
-
-app = Flask(__name__)
-
+# Flask webhook endpointi
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     json_update = request.get_json(force=True)
     update = Update.de_json(json_update, bot)
-    dispatcher.process_update(update)
+    application.update_queue.put(update)
     return "OK"
 
 @app.route("/")
